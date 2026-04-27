@@ -119,6 +119,8 @@ int main(){
     float camRotX = 0.0f;
     float camRotY = 0.0f;
 
+    float camZoom = 20.0f;
+
     ftxui::Component renderer = ftxui::Renderer([&]{
 
         ftxui::Dimensions term_size = ftxui::Terminal::Size();
@@ -145,8 +147,8 @@ int main(){
             v2 = RotateX(v2, camRotX);
             v2 = RotateY(v2, camRotY);
 
-            Vector2 p1 = ProjectToScreen(v1, 20.0f, 4.0f);
-            Vector2 p2 = ProjectToScreen(v2, 20.0f, 4.0f);
+            Vector2 p1 = ProjectToScreen(v1, camZoom, 4.0f);
+            Vector2 p2 = ProjectToScreen(v2, camZoom, 4.0f);
 
             my_canvas.DrawPointLine(p1.x + centerX, p1.y + centerY, p2.x + centerX, p2.y + centerY);
         }
@@ -157,10 +159,26 @@ int main(){
     // Event listener for the keyboard controls
     ftxui::Component event_listener = ftxui::CatchEvent(renderer, [&](ftxui::Event event){
 
+        // rot controls
         if (event == ftxui::Event::Character('w')) {camRotX -= 0.1f; return true;}
         if (event == ftxui::Event::Character('s')) {camRotX += 0.1f; return true;}
         if (event == ftxui::Event::Character('a')) {camRotY -= 0.1f; return true;}
         if (event == ftxui::Event::Character('d')) {camRotY += 0.1f; return true;}
+        
+        // zoom controls
+        if (event == ftxui::Event::Character('+') || event == ftxui::Event::Character('=')){ 
+            
+            camZoom += 2.0f; 
+            return true; 
+        }
+        if (event == ftxui::Event::Character('-') || event == ftxui::Event::Character('_')){
+
+            camZoom -= 2.0f; 
+            // Prevent inverting the model
+            if(camZoom < 1.0f) camZoom = 1.0f;
+            return true; 
+        }
+        
         return false; 
     });
 
