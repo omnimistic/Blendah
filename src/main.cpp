@@ -3,6 +3,9 @@
 #include <ftxui/dom/canvas.hpp>
 #include <ftxui/screen/screen.hpp>
 #include <ftxui/dom/elements.hpp>
+#include <ftxui/component/component.hpp>
+#include <ftxui/component/screen_interactive.hpp>
+#include <ftxui/screen/terminal.hpp>
 
 
 struct Vector2{
@@ -86,29 +89,41 @@ Vector2 ProjectToScreen(Vector3 point, float scale_multiplier, float zOffset){
 
 
 int main(){
-
-    ftxui::Canvas my_canvas = ftxui::Canvas(100, 100);
-
+    
     Mesh defaultCube = createCube();
 
-    for(size_t i = 0; i < defaultCube.edges.size(); ++i){
+    ftxui::ScreenInteractive screen = ftxui::ScreenInteractive::Fullscreen();
 
-        std::pair<int, int> edge = defaultCube.edges[i];
+    ftxui::Component renderer = ftxui::Renderer([&]{
 
-        Vector3 v1 = defaultCube.vertices[edge.first];
-        Vector3 v2 = defaultCube.vertices[edge.second];
+        ftxui::Dimensions term_size = ftxui::Terminal::Size();
+        
+        int canvas_width = term_size.dimx * 2;
+        int canvas_height = term_size.dimy * 4;
+        
+        ftxui::Canvas my_canvas = ftxui::Canvas(canvas_width, canvas_height);
 
-        Vector2 p1 = ProjectToScreen(v1, 20.0f, 4.0f);
-        Vector2 p2 = ProjectToScreen(v2, 20.0f, 4.0f);
+        // Find the center of the window
+        int centerX = canvas_width / 2;
+        int centerY = canvas_height / 2;
 
-        my_canvas.DrawPointLine(p1.x + 50, p1.y + 50, p2.x + 50, p2.y + 50);
-    }
+        for(size_t i = 0; i < defaultCube.edges.size(); ++i){
+            
+            std::pair<int, int> edge = defaultCube.edges[i];
 
-    ftxui::Element document = ftxui::canvas(std::move(my_canvas));
-    ftxui::Screen screen = ftxui::Screen::Create(ftxui::Dimension::Fixed(100), ftxui::Dimension::Fixed(100));
-    
-    ftxui::Render(screen, document);
-    screen.Print();
+            Vector3 v1 = defaultCube.vertices[edge.first];
+            Vector3 v2 = defaultCube.vertices[edge.second];
+
+            Vector2 p1 = ProjectToScreen(v1, 20.0f, 4.0f);
+            Vector2 p2 = ProjectToScreen(v2, 20.0f, 4.0f);
+
+            my_canvas.DrawPointLine(p1.x + centerX, p1.y + centerY, p2.x + centerX, p2.y + centerY);
+        }
+
+        return ftxui::canvas(std::move(my_canvas));
+    });
+
+    screen.Loop(renderer);
 
     return 0;
 }
