@@ -1,0 +1,6 @@
+build/
+vcpkg_installed/
+.vscode/
+.vs/
+*.exe
+.pain_deps.cmake

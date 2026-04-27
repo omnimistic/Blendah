@@ -1,0 +1,14 @@
+{
+  "version": 3,
+  "configurePresets": [
+    {
+      "name": "vcpkg",
+      "displayName": "PAIN vcpkg Toolchain",
+      "binaryDir": "${sourceDir}/build",
+      "cacheVariables": {
+        "CMAKE_TOOLCHAIN_FILE": "C:/Users/gunja/.pain/vcpkg/scripts/buildsystems/vcpkg.cmake"
+      },
+      "generator": "MinGW Makefiles"
+    }
+  ]
+}
