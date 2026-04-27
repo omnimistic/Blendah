@@ -1,10 +1,12 @@
 #include <iostream>
 #include <vector>
+#include <cmath>
 #include <ftxui/dom/canvas.hpp>
 #include <ftxui/screen/screen.hpp>
 #include <ftxui/dom/elements.hpp>
 #include <ftxui/component/component.hpp>
 #include <ftxui/component/screen_interactive.hpp>
+#include <ftxui/component/event.hpp>
 #include <ftxui/screen/terminal.hpp>
 
 
@@ -18,6 +20,7 @@ struct Vector2{
     }
 };
 
+
 struct Vector3{
 
     float x, y, z;
@@ -29,6 +32,7 @@ struct Vector3{
     }
     
 };
+
 
 struct Mesh{
 
@@ -69,6 +73,7 @@ Mesh createCube(){
     return cube;
 }
 
+
 Vector2 ProjectToScreen(Vector3 point, float scale_multiplier, float zOffset){
 
     float z_adjusted = point.z + zOffset;
@@ -88,11 +93,31 @@ Vector2 ProjectToScreen(Vector3 point, float scale_multiplier, float zOffset){
 }
 
 
+Vector3 RotateX(Vector3 point, float angle){
+
+    float new_y = point.y * std::cos(angle) - point.z * std::sin(angle);
+    float new_z = point.y * std::sin(angle) + point.z * std::cos(angle);
+
+    return Vector3(point.x, new_y, new_z);
+}
+
+
+Vector3 RotateY(Vector3 point, float angle){
+
+    float new_x = point.x * std::cos(angle) + point.z * std::sin(angle);
+    float new_z = -point.x * std::sin(angle) + point.z * std::cos(angle);
+    
+    return Vector3(new_x, point.y, new_z);
+}
+
 int main(){
     
     Mesh defaultCube = createCube();
 
     ftxui::ScreenInteractive screen = ftxui::ScreenInteractive::Fullscreen();
+
+    float camRotX = 0.0f;
+    float camRotY = 0.0f;
 
     ftxui::Component renderer = ftxui::Renderer([&]{
 
@@ -114,6 +139,12 @@ int main(){
             Vector3 v1 = defaultCube.vertices[edge.first];
             Vector3 v2 = defaultCube.vertices[edge.second];
 
+            v1 = RotateX(v1, camRotX);
+            v1 = RotateY(v1, camRotY);
+
+            v2 = RotateX(v2, camRotX);
+            v2 = RotateY(v2, camRotY);
+
             Vector2 p1 = ProjectToScreen(v1, 20.0f, 4.0f);
             Vector2 p2 = ProjectToScreen(v2, 20.0f, 4.0f);
 
@@ -123,7 +154,17 @@ int main(){
         return ftxui::canvas(std::move(my_canvas));
     });
 
-    screen.Loop(renderer);
+    // Event listener for the keyboard controls
+    ftxui::Component event_listener = ftxui::CatchEvent(renderer, [&](ftxui::Event event){
+
+        if (event == ftxui::Event::Character('w')) {camRotX -= 0.1f; return true;}
+        if (event == ftxui::Event::Character('s')) {camRotX += 0.1f; return true;}
+        if (event == ftxui::Event::Character('a')) {camRotY -= 0.1f; return true;}
+        if (event == ftxui::Event::Character('d')) {camRotY += 0.1f; return true;}
+        return false; 
+    });
+
+    screen.Loop(event_listener);
 
     return 0;
 }
