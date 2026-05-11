@@ -15,9 +15,10 @@
 #include "include/camera.h"
 #include "include/renderer.h"
 #include "include/controls.h"
+#include "include/obj_io.h"
 
 // Stage Management
-enum class AppStage {BOOT, MENU, SCENE};
+enum class AppStage {BOOT, MENU, IMPORT, SCENE};
 
 // ASCII Constant for bootup
 const std::string GRADIENT = "$@B%8&WM#*oahkbdpqwmZO0QLCJUYXzcvunxrjft/\\|()1{}[]?-_+~<>i!lI;:,\"^'.";
@@ -100,6 +101,9 @@ int main(){
     float bootTimer = 0.0f;
     const float BOOT_DURATION = 2.0f;
 
+    std::string importPath = "";
+    std::string importError = "";
+
     auto screen = ftxui::ScreenInteractive::Fullscreen();
 
     auto renderer = ftxui::Renderer([&]{
@@ -165,6 +169,30 @@ int main(){
 
         ftxui::Element scene = RenderScene(mesh, state.camera, state.mode, state.selectedVertex, state.inAxisSession, state.lastMoved);
 
+        // Import obj
+        if (currentStage == AppStage::IMPORT){
+
+            auto dialog_box = ftxui::vbox({
+                
+                ftxui::text("--- IMPORT OBJ ---") | ftxui::bold | ftxui::center,
+                ftxui::separator(),
+                ftxui::text("Enter file path:"),
+                ftxui::text("> " + importPath + "_") | ftxui::color(ftxui::Color::CyanLight),
+                ftxui::text(importError) | ftxui::color(ftxui::Color::Red),
+                ftxui::separator(),
+                ftxui::text("[ENTER] Load    [ESC] Cancel") | ftxui::dim | ftxui::center
+                
+            })
+
+            | ftxui::border | ftxui::size(ftxui::WIDTH, ftxui::EQUAL, 60) | ftxui::center;
+
+            return ftxui::vbox({
+                ftxui::filler(),
+                dialog_box,
+                ftxui::filler()
+            });
+        }
+
         // HUD Mode Text
         std::string hud = (state.mode == appMode::VIEW) ? "VIEW | WASD=Rotate +/-=Zoom r=Reset TAB=Edit" : "EDIT | WASD/Q/E=Select Arrows=FreeMov ^A/^D=MoveX ^W/^S=MoveY ^Q/^E=MoveZ TAB=View";
 
@@ -177,11 +205,12 @@ int main(){
     });
 
     auto component = ftxui::CatchEvent(renderer, [&](ftxui::Event ev){
-        
+
         if (currentStage == AppStage::BOOT) return true;
 
+        // Menu controls
         if (currentStage == AppStage::MENU){
-            
+
             if (ev == ftxui::Event::ArrowUp){
                 menuSelector = (menuSelector - 1 + (int)menuOptions.size()) % (int)menuOptions.size();
                 return true;
@@ -191,18 +220,65 @@ int main(){
                 return true;
             }
             if (ev == ftxui::Event::Return || ev == ftxui::Event::Character(' ')){
-
-                if (menuSelector == 0) currentStage = AppStage::SCENE; // Create blank
-
-                //TODO: add import and help here
-                
-                if (menuSelector == 3) screen.Exit(); // Exit
-                
+                if (menuSelector == 0){
+                    mesh = createCube(); 
+                    state = AppState();
+                    currentStage = AppStage::SCENE;
+                }
+                if (menuSelector == 1){ // Open Import Dialog
+                    importPath = "";
+                    importError = "";
+                    currentStage = AppStage::IMPORT;
+                }
+                if (menuSelector == 3) screen.Exit();
                 return true;
             }
             return true;
         }
 
+        // Import Dialog Inputs
+        if (currentStage == AppStage::IMPORT){
+            
+            if (ev == ftxui::Event::Escape){
+                currentStage = AppStage::MENU;
+                return true;
+            }
+            
+            if (ev == ftxui::Event::Backspace){
+                if (!importPath.empty()) importPath.pop_back();
+                importError = ""; // Clear error when user starts typing again
+                return true;
+            }
+            
+            if (ev == ftxui::Event::Return){
+                if (importPath.empty()){
+                    importError = "Error: Path cannot be empty.";
+                    return true;
+                }
+                
+                Mesh imported = LoadOBJ(importPath);
+                
+                if (imported.vertices.empty()){
+                    importError = "Error: Could not load file or file is empty.";
+                }
+                else{
+                    mesh = imported;
+                    state = AppState(); // Reset camera so it doesn't break
+                    currentStage = AppStage::SCENE;
+                }
+                return true;
+            }
+
+            if (ev.is_character()){
+                importPath += ev.character();
+                importError = "";
+                return true;
+            }
+
+            return true; // Block other inputs from leaking into the scene
+        }
+
+        // Scene Inputs
         HandleInput(ev, state, mesh);
         return true;
     });
