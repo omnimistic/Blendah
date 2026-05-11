@@ -9,6 +9,7 @@
 #include <thread>
 #include <chrono>
 #include <algorithm>
+#include <sstream>
 
 #include "include/types.h"
 #include "include/mesh.h"
@@ -76,7 +77,7 @@ R"( | $$__/ $$| $$      | $$__    | $$$\| $$| $$  | $$| $$__| $$| $$__| $$ )",
 R"( | $$    $$| $$      | $$  \   | $$$$\ $$| $$  | $$| $$    $$| $$    $$ )",      
 R"( | $$$$$$$\| $$      | $$$$$   | $$\$$ $$| $$  | $$| $$$$$$$$| $$$$$$$$ )",      
 R"( | $$__/ $$| $$_____ | $$_____ | $$ \$$$$| $$__/ $$| $$  | $$| $$  | $$ )",      
-R"( | $$    $$| $$     \| $$     \| $$  \$$$| $$    $$| $$  | $$| $$  | $$ )",      
+R"( | $$    $$| $$    \| $$    \| $$  \$$$| $$    $$| $$  | $$| $$  | $$ )",      
 R"(  \$$$$$$$  \$$$$$$$$ \$$$$$$$$ \$$   \$$ \$$$$$$$  \$$   \$$ \$$   \$$ )",
 }
 };
@@ -104,6 +105,76 @@ int main(){
     std::string importPath = "";
     std::string importError = "";
 
+    // Blendah command Line Variables
+    bool isCommandMode = false;
+    std::string commandBuffer = "";
+    std::string commandMessage = "";
+
+    // Helper to strip quotes and whitespace from copied paths
+    auto CleanPath = [](std::string path){
+        
+        if (path.empty()) return path;
+        
+        size_t first = path.find_first_not_of(" \t\r\n");
+        if (first == std::string::npos) return std::string("");
+        size_t last = path.find_last_not_of(" \t\r\n");
+        path = path.substr(first, (last - first + 1));
+
+        if (path.size() >= 2 && 
+           ((path.front() == '"' && path.back() == '"') || 
+            (path.front() == '\'' && path.back() == '\''))){
+            path = path.substr(1, path.size() - 2);
+        }
+
+        return path;
+    };
+
+    // Blendah Command Line Parser
+    auto ProcessCommand = [&](std::string cmd){
+        if (cmd.empty()) return;
+
+        std::istringstream iss(cmd);
+        std::string action;
+        iss >> action;
+
+        // Converting to lowercase for case-insensitivity
+        std::transform(action.begin(), action.end(), action.begin(), ::tolower);
+
+        if (action == "export" || action == "w"){
+            std::string filepath;
+            std::getline(iss >> std::ws, filepath); // Get the rest of the line
+            
+            filepath = CleanPath(filepath);
+
+            // Print Help Menu
+            if (filepath == "-h" || filepath == "--help") {
+                commandMessage = "Usage: :export [path] | Example: :export my_model.obj";
+                return;
+            }
+
+            // Strip dash if user typed ":export -filename.obj"
+            if (!filepath.empty() && filepath[0] == '-'){
+                filepath = filepath.substr(1);
+            }
+
+            if (filepath.empty()){
+                filepath = "blendah_export.obj"; // Fallback default
+            }
+
+            ExportOBJ(mesh, filepath);
+            commandMessage = "\"" + filepath + "\" written.";
+        } 
+
+        else if (action == "q" || action == "quit"){
+            currentStage = AppStage::MENU;
+            commandMessage = "";
+        }
+
+        else{
+            commandMessage = "E492: Not an editor command: " + action;
+        }
+    };
+
     auto screen = ftxui::ScreenInteractive::Fullscreen();
 
     auto renderer = ftxui::Renderer([&]{
@@ -124,7 +195,7 @@ int main(){
 
                 std::string render_line = "";
                 for (char c : line) render_line += (c == ' ') ? " " : std::string(1, fill_char);
-                logo_lines.push_back(ftxui::text(render_line) | ftxui::bold | ftxui::center);
+                logo_lines.push_back(ftxui::text(render_line) | ftxui::bold | ftxui::color(ftxui::Color::Orange1) | ftxui::center);
             }
 
             return ftxui::vbox({ftxui::filler(), ftxui::vbox(std::move(logo_lines)), ftxui::filler()});
@@ -194,14 +265,25 @@ int main(){
         }
 
         // HUD Mode Text
-        std::string hud = (state.mode == appMode::VIEW) ? "VIEW | WASD=Rotate +/-=Zoom r=Reset TAB=Edit" : "EDIT | WASD/Q/E=Select Arrows=FreeMov ^A/^D=MoveX ^W/^S=MoveY ^Q/^E=MoveZ TAB=View";
+        std::string hud = (state.mode == appMode::VIEW) 
+            ? "VIEW | WASD=Rotate +/-=Zoom r=Reset TAB=Edit :cmd ESC=Menu" : "EDIT | WASD/Q/E=Select Arrows=FreeMov ^A/^D=MoveX ^W/^S=MoveY ^Q/^E=MoveZ TAB=View :cmd ESC=Menu";
 
-        return ftxui::vbox({
-            
+        // A single flat elements list to prevent nested flex elements from pushing content off-screen
+        ftxui::Elements scene_elements = {
             ftxui::text(hud) | ftxui::bold,
             ftxui::separator(),
             scene | ftxui::flex
-        });
+        };
+
+        // Inject blendah command bar if active
+        if (isCommandMode){
+            scene_elements.push_back(ftxui::text(":" + commandBuffer + "_") | ftxui::bold | ftxui::color(ftxui::Color::Yellow));
+        }
+        else if (!commandMessage.empty()){
+            scene_elements.push_back(ftxui::text(commandMessage) | ftxui::dim);
+        }
+
+        return ftxui::vbox(std::move(scene_elements));
     });
 
     auto component = ftxui::CatchEvent(renderer, [&](ftxui::Event ev){
@@ -224,6 +306,7 @@ int main(){
                     mesh = createCube(); 
                     state = AppState();
                     currentStage = AppStage::SCENE;
+                    commandMessage = "";
                 }
                 if (menuSelector == 1){ // Open Import Dialog
                     importPath = "";
@@ -251,12 +334,14 @@ int main(){
             }
             
             if (ev == ftxui::Event::Return){
-                if (importPath.empty()){
+                std::string cleanPath = CleanPath(importPath);
+
+                if (cleanPath.empty()){
                     importError = "Error: Path cannot be empty.";
                     return true;
                 }
                 
-                Mesh imported = LoadOBJ(importPath);
+                Mesh imported = LoadOBJ(cleanPath);
                 
                 if (imported.vertices.empty()){
                     importError = "Error: Could not load file or file is empty.";
@@ -265,6 +350,7 @@ int main(){
                     mesh = imported;
                     state = AppState(); // Reset camera so it doesn't break
                     currentStage = AppStage::SCENE;
+                    commandMessage = "";
                 }
                 return true;
             }
@@ -278,8 +364,62 @@ int main(){
             return true; // Block other inputs from leaking into the scene
         }
 
-        // Scene Inputs
+        // Scene Inputs and command line intercept
+        if (currentStage == AppStage::SCENE){
+
+            if (isCommandMode){
+
+                if (ev == ftxui::Event::Escape){
+                    isCommandMode = false;
+                    return true;
+                }
+
+                if (ev == ftxui::Event::Backspace){
+                    if (!commandBuffer.empty()) commandBuffer.pop_back();
+                    else isCommandMode = false; // Close command mode if backspacing on empty
+                    return true;
+                }
+
+                if (ev == ftxui::Event::Return){
+                    ProcessCommand(commandBuffer);
+                    isCommandMode = false;
+                    return true;
+                }
+
+                if (ev.is_character()){
+                    commandBuffer += ev.character();
+                    return true;
+                }
+
+                return true; // Block scene controls while typing command
+            }
+
+            else{
+
+                if (ev == ftxui::Event::Character(':')){
+
+                    isCommandMode = true;
+                    commandBuffer = "";
+                    commandMessage = "";
+                    return true;
+                }
+
+                if (ev == ftxui::Event::Escape){
+
+                    currentStage = AppStage::MENU;
+                    commandMessage = "";
+                    return true;
+                }
+            }
+        }
+
         HandleInput(ev, state, mesh);
+        
+        // Clear message on next input if not in command mode
+        if (currentStage == AppStage::SCENE && !isCommandMode && (ev.is_character() || ev.is_mouse())){
+            commandMessage = ""; 
+        }
+
         return true;
     });
 
