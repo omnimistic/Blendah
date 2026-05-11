@@ -112,6 +112,7 @@ Vector3 RotateY(Vector3 point, float angle){
     return Vector3(new_x, point.y, new_z);
 }
 
+
 int main(){
     
     Mesh defaultCube = createCube();
@@ -139,74 +140,70 @@ int main(){
         // Find the center of the window
         int centerX = canvas_width / 2;
         int centerY = canvas_height / 2;
+        float nearPlane = -3.9f;
 
-        // Axes
-        float axisLength = 10.0f; 
-
-        // Endpoints of axes
-        Vector3 orig(0,0,0);
-        Vector3 xPos(axisLength, 0, 0);
-        Vector3 xNeg(-axisLength, 0, 0);
-        Vector3 yPos(0, axisLength, 0);
-        Vector3 yNeg(0, -axisLength, 0);
-        Vector3 zPos(0, 0, axisLength);
-        Vector3 zNeg(0, 0, -axisLength);
-
-        // Helper to rotate and project in one go
-        auto getProj = [&](Vector3 v){
-            v = RotateX(v, camRotX);
+        auto getRotated = [&](Vector3 v){
             v = RotateY(v, camRotY);
-            return ProjectToScreen(v, camZoom, 4.0f);
+            v = RotateX(v, camRotX);
+            return v;
         };
 
-        Vector2 pOrig = getProj(orig);
-        Vector2 pX1 = getProj(xPos); Vector2 pX2 = getProj(xNeg);
-        Vector2 pY1 = getProj(yPos); Vector2 pY2 = getProj(yNeg);
-        Vector2 pZ1 = getProj(zPos); Vector2 pZ2 = getProj(zNeg);
+        // Draw the axes
+        float axisLen = 100.0f;
 
-        // Draw axes
-        my_canvas.DrawPointLine(pOrig.x + centerX, pOrig.y + centerY, pX1.x + centerX, pX1.y + centerY, ftxui::Color::Red);
-        my_canvas.DrawPointLine(pOrig.x + centerX, pOrig.y + centerY, pX2.x + centerX, pX2.y + centerY, ftxui::Color::Red);
-        my_canvas.DrawPointLine(pOrig.x + centerX, pOrig.y + centerY, pY1.x + centerX, pY1.y + centerY, ftxui::Color::Green);
-        my_canvas.DrawPointLine(pOrig.x + centerX, pOrig.y + centerY, pY2.x + centerX, pY2.y + centerY, ftxui::Color::Green);
-        my_canvas.DrawPointLine(pOrig.x + centerX, pOrig.y + centerY, pZ1.x + centerX, pZ1.y + centerY, ftxui::Color::Blue);
-        my_canvas.DrawPointLine(pOrig.x + centerX, pOrig.y + centerY, pZ2.x + centerX, pZ2.y + centerY, ftxui::Color::Blue);
+        std::vector<std::pair<Vector3, ftxui::Color>> axisPts = {
+            {{axisLen, 0, 0}, ftxui::Color::Red}, {{-axisLen, 0, 0}, ftxui::Color::Red},
+            {{0, axisLen, 0}, ftxui::Color::Green}, {{0, -axisLen, 0}, ftxui::Color::Green},
+            {{0, 0, axisLen}, ftxui::Color::Blue}, {{0, 0, -axisLen}, ftxui::Color::Blue}
+        };
+
+        Vector3 origin_rot = getRotated(Vector3(0,0,0));
+        Vector2 pOrig = ProjectToScreen(origin_rot, camZoom, 4.0f);
+
+        for(auto& axis : axisPts){
+            Vector3 v = getRotated(axis.first);
+            if(v.z < nearPlane){
+                float t = nearPlane / v.z;
+                v.x *= t; v.y *= t; v.z = nearPlane;
+            }
+            Vector2 pAxis = ProjectToScreen(v, camZoom, 4.0f);
+            my_canvas.DrawPointLine(pOrig.x + centerX, pOrig.y + centerY, pAxis.x + centerX, pAxis.y + centerY, axis.second);
+        }
 
         // Draw Mesh Edges
         for(size_t i = 0; i < defaultCube.edges.size(); ++i){
             
             std::pair<int, int> edge = defaultCube.edges[i];
+            Vector3 v1 = getRotated(defaultCube.vertices[edge.first]);
+            Vector3 v2 = getRotated(defaultCube.vertices[edge.second]);
 
-            Vector3 v1 = defaultCube.vertices[edge.first];
-            Vector3 v2 = defaultCube.vertices[edge.second];
+            if(v1.z > nearPlane && v2.z > nearPlane){
 
-            v1 = RotateX(v1, camRotX); v1 = RotateY(v1, camRotY);
-            v2 = RotateX(v2, camRotX); v2 = RotateY(v2, camRotY);
+                Vector2 p1 = ProjectToScreen(v1, camZoom, 4.0f);
+                Vector2 p2 = ProjectToScreen(v2, camZoom, 4.0f);
 
-            Vector2 p1 = ProjectToScreen(v1, camZoom, 4.0f);
-            Vector2 p2 = ProjectToScreen(v2, camZoom, 4.0f);
-
-            my_canvas.DrawPointLine(p1.x + centerX, p1.y + centerY, p2.x + centerX, p2.y + centerY, ftxui::Color::White);
+                my_canvas.DrawPointLine(p1.x + centerX, p1.y + centerY, p2.x + centerX, p2.y + centerY, ftxui::Color::White);
+            }
         }
 
         // Draw Vertices
         for(int i = 0; i < (int)defaultCube.vertices.size(); ++i){
-            Vector3 v = defaultCube.vertices[i];
-            v = RotateX(v, camRotX); v = RotateY(v, camRotY);
+
+            Vector3 v = getRotated(defaultCube.vertices[i]);
+
+            if(v.z < nearPlane) continue;
             Vector2 p = ProjectToScreen(v, camZoom, 4.0f);
+            ftxui::Color vCol = ftxui::Color::Orange1;
 
-            ftxui::Color vertexColor = ftxui::Color::Orange1;
-
-            if(currentMode == appMode::EDIT){
-                if(i == selectedVertex){
-                    vertexColor = ftxui::Color::Red;
-                    my_canvas.DrawPointCircle(p.x + centerX, p.y + centerY, 4, ftxui::Color::Yellow);
-                }
+            if(currentMode == appMode::EDIT && i == selectedVertex){
+                vCol = ftxui::Color::Red;
+                my_canvas.DrawPointCircle(p.x + centerX, p.y + centerY, 4, ftxui::Color::Yellow);
             }
-            my_canvas.DrawPoint(p.x + centerX, p.y + centerY, true, vertexColor);
+
+            my_canvas.DrawPoint(p.x + centerX, p.y + centerY, true, vCol);
         }
 
-        std::string mode_text = (currentMode == appMode::VIEW) ? "MODE: VIEW (WASD=Rot, +/-=Zoom, TAB=Edit)" : "MODE: EDIT (WASD=Select, Arrows=Move, TAB=View)";
+        std::string mode_text = (currentMode == appMode::VIEW) ? "MODE: VIEW (WASD=Rot, +/-=Zoom, TAB=Edit)" : "MODE: EDIT (WASD=Spatial Select, Arrows=Rel Move, TAB=View)";
         return ftxui::vbox({
             ftxui::text(mode_text) | ftxui::bold,
             ftxui::canvas(std::move(my_canvas)) | ftxui::flex
@@ -228,30 +225,16 @@ int main(){
 
                     for(int i = 0; i < (int)defaultCube.vertices.size(); ++i){
 
-                        Vector3 v = defaultCube.vertices[i];
-
+                        Vector3 v = RotateY(defaultCube.vertices[i], camRotY);
                         v = RotateX(v, camRotX);
-                        v = RotateY(v, camRotY);
 
                         Vector2 p = ProjectToScreen(v, camZoom, 4.0f);
 
-                        float distSq = p.x * p.x + p.y * p.y;
-
-                        if(distSq < minDist){
-
-                            minDist = distSq;
-                            selectedVertex = i;
-
-                        }else if(std::abs(distSq - minDist) < 0.001f){
-
-                            if(p.y < defaultCube.vertices[selectedVertex].y) selectedVertex = i;
-                        }
+                        float d = p.x * p.x + p.y * p.y;
+                        if(d < minDist){ minDist = d; selectedVertex = i; }
                     }
                 }
-
-            }else{
-                currentMode = appMode::VIEW;
-            }
+            }else{currentMode = appMode::VIEW;}
             return true;
         }
 
@@ -265,16 +248,11 @@ int main(){
 
         // View mode controls
         if(currentMode == appMode::VIEW){
-            if(event == ftxui::Event::Character('w')) {camRotX -= 0.1f; return true;}
-            if(event == ftxui::Event::Character('s')) {camRotX += 0.1f; return true;}
+            if(event == ftxui::Event::Character('w')) {camRotX += 0.1f; return true;}
+            if(event == ftxui::Event::Character('s')) {camRotX -= 0.1f; return true;}
             if(event == ftxui::Event::Character('a')) {camRotY -= 0.1f; return true;}
             if(event == ftxui::Event::Character('d')) {camRotY += 0.1f; return true;}
 
-            if(event == ftxui::Event::Character('q')) {camRotX -= 0.1f; camRotY -= 0.1f; return true;}
-            if(event == ftxui::Event::Character('e')) {camRotX -= 0.1f; camRotY += 0.1f; return true;}
-            if(event == ftxui::Event::Character('z')) {camRotX += 0.1f; camRotY -= 0.1f; return true;}
-            if(event == ftxui::Event::Character('c')) {camRotX += 0.1f; camRotY += 0.1f; return true;}
-            
             if(event == ftxui::Event::Character('+') || event == ftxui::Event::Character('=')){
                 camZoom += 2.0f;
                 return true;
@@ -286,29 +264,62 @@ int main(){
             }
 
         }else{
-            // Edit mode controls
-            if(event == ftxui::Event::Character('d')){
-                selectedVertex = (selectedVertex + 1) % defaultCube.vertices.size();
-                return true;
-            }
-            if(event == ftxui::Event::Character('a')){
-                selectedVertex = (selectedVertex - 1 + defaultCube.vertices.size()) % defaultCube.vertices.size();
-                return true;
-            }
-            if(event == ftxui::Event::ArrowUp){
-                defaultCube.vertices[selectedVertex].y -= 0.1f;
-                return true;
-            }
-            if(event == ftxui::Event::ArrowDown){
-                defaultCube.vertices[selectedVertex].y += 0.1f;
-                return true;
-            }
-            if(event == ftxui::Event::ArrowLeft){
-                defaultCube.vertices[selectedVertex].x -= 0.1f;
-                return true;
-            }
-            if(event == ftxui::Event::ArrowRight){
-                defaultCube.vertices[selectedVertex].x += 0.1f;
+            // Spatial Selection Logic relative to current view
+            auto jumpSelection = [&](float dirX, float dirY) {
+                if (selectedVertex == -1) return;
+                
+                Vector3 v_curr = RotateY(defaultCube.vertices[selectedVertex], camRotY);
+                v_curr = RotateX(v_curr, camRotX);
+                Vector2 p_curr = ProjectToScreen(v_curr, camZoom, 4.0f);
+
+                int bestIdx = -1;
+                float minScore = 1e10;
+
+                for (int i = 0; i < (int)defaultCube.vertices.size(); ++i) {
+                    if (i == selectedVertex) continue;
+
+                    Vector3 v_next = RotateY(defaultCube.vertices[i], camRotY);
+                    v_next = RotateX(v_next, camRotX);
+                    if (v_next.z < -3.9f) continue; // Skip vertices behind camera
+
+                    Vector2 p_next = ProjectToScreen(v_next, camZoom, 4.0f);
+                    float sdx = p_next.x - p_curr.x;
+                    float sdy = p_next.y - p_curr.y;
+
+                    // Dot product to check if vertex is in the input direction
+                    float dot = sdx * dirX + sdy * dirY;
+                    if (dot > 0.1f) {
+                        // Scoring heuristic to favour vertices closer and more aligned with the axis
+                        float score = (sdx * sdx + sdy * sdy) / (dot * dot);
+                        if (score < minScore) {
+                            minScore = score;
+                            bestIdx = i;
+                        }
+                    }
+                }
+                if (bestIdx != -1) selectedVertex = bestIdx;
+            };
+
+            if(event == ftxui::Event::Character('w')) { jumpSelection(0, -1); return true; }
+            if(event == ftxui::Event::Character('s')) { jumpSelection(0, 1); return true; }
+            if(event == ftxui::Event::Character('a')) { jumpSelection(-1, 0); return true; }
+            if(event == ftxui::Event::Character('d')) { jumpSelection(1, 0); return true; }
+            
+            float dmx = 0, dmy = 0;
+            bool do_move = false;
+            if(event == ftxui::Event::ArrowUp)    {dmy = -0.1f; do_move = true;}
+            if(event == ftxui::Event::ArrowDown)  {dmy =  0.1f; do_move = true;}
+            if(event == ftxui::Event::ArrowLeft)  {dmx = -0.1f; do_move = true;}
+            if(event == ftxui::Event::ArrowRight) {dmx =  0.1f; do_move = true;}
+
+            if(do_move && selectedVertex != -1){
+                Vector3 delta(dmx, dmy, 0);
+                // Inverse rotation for relative 3D movement
+                delta = RotateX(delta, -camRotX);
+                delta = RotateY(delta, -camRotY);
+                defaultCube.vertices[selectedVertex].x += delta.x;
+                defaultCube.vertices[selectedVertex].y += delta.y;
+                defaultCube.vertices[selectedVertex].z += delta.z;
                 return true;
             }
         }
