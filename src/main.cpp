@@ -10,6 +10,7 @@
 #include <chrono>
 #include <algorithm>
 #include <sstream>
+#include <cmath>
 
 #include "include/types.h"
 #include "include/mesh.h"
@@ -35,52 +36,52 @@ std::vector<std::string> bootLogo = {
 };
 
 // Main Menu animation
-std::vector<std::vector<std::string>> menuLogos = {
-{
-R"(  /$$$$$$$  /$$       /$$$$$$$$ /$$   /$$ /$$$$$$$   /$$$$$$  /$$   /$$ )",    
-R"( | $$__  $$| $$      | $$_____/| $$$ | $$| $$__  $$ /$$__  $$| $$  | $$ )",    
-R"( | $$  \ $$| $$      | $$      | $$$$| $$| $$  \ $$| $$  \ $$| $$  | $$ )",    
-R"( | $$$$$$$ | $$      | $$$$$   | $$ $$ $$| $$  | $$| $$$$$$$$| $$$$$$$$ )",    
-R"( | $$__  $$| $$      | $$__/   | $$  $$$$| $$  | $$| $$__  $$| $$__  $$ )",    
-R"( | $$  \ $$| $$      | $$      | $$\  $$$| $$  | $$| $$  | $$| $$  | $$ )",    
-R"( | $$$$$$$/| $$$$$$$$| $$$$$$$$| $$ \  $$| $$$$$$$/| $$  | $$| $$  | $$ )",    
-R"( |_______/ |________/|________/|__/  \__/|_______/ |__/  |__/|__/  |__/ )",    
-R"(                                                                        )"  
-},
-{
-R"( $$$$$$$\  $$\       $$$$$$$$\ $$\   $$\ $$$$$$$\   $$$$$$\  $$\   $$\  )",    
-R"( $$  __$$\ $$ |      $$  _____|$$$\  $$ |$$  __$$\ $$  __$$\ $$ |  $$ | )",    
-R"( $$ |  $$ |$$ |      $$ |      $$$$\ $$ |$$ |  $$ |$$ /  $$ |$$ |  $$ | )",    
-R"( $$$$$$$\ |$$ |      $$$$$\    $$ $$\$$ |$$ |  $$ |$$$$$$$$ |$$$$$$$$ | )",    
-R"( $$  __$$\ $$ |      $$  __|   $$ \$$$$ |$$ |  $$ |$$  __$$ |$$  __$$ | )",    
-R"( $$ |  $$ |$$ |      $$ |      $$ |\$$$ |$$ |  $$ |$$ |  $$ |$$ |  $$ | )",    
-R"( $$$$$$$  |$$$$$$$$\ $$$$$$$$\ $$ | \$$ |$$$$$$$  |$$ |  $$ |$$ |  $$ | )",    
-R"( \_______/ \________|\________|\__|  \__|\_______/ \__|  \__|\__|  \__| )",   
-R"(                                                                        )"
-},
-{
-R"(  _______   __        ________  __    __  _______    ______   __    __  )",      
-R"( /       \ /  |      /        |/  \  /  |/       \  /      \ /  |  /  | )",      
-R"( $$$$$$$  |$$ |      $$$$$$$$/ $$  \ $$ |$$$$$$$  |/$$$$$$  |$$ |  $$ | )",      
-R"( $$ |__$$ |$$ |      $$ |__    $$$  \$$ |$$ |  $$ |$$ |__$$ |$$ |__$$ | )",      
-R"( $$    $$< $$ |      $$    |   $$$$  $$ |$$ |  $$ |$$    $$ |$$    $$ | )",      
-R"( $$$$$$$  |$$ |      $$$$$/    $$ $$ $$ |$$ |  $$ |$$$$$$$$ |$$$$$$$$ | )",      
-R"( $$ |__$$ |$$ |_____ $$ |_____ $$ |$$$$ |$$ |__$$ |$$ |  $$ |$$ |  $$ | )",      
-R"( $$    $$/ $$       |$$       |$$ | $$$ |$$    $$/ $$ |  $$ |$$ |  $$ | )",      
-R"( $$$$$$$/  $$$$$$$$/ $$$$$$$$/ $$/   $$/ $$$$$$$/  $$/   $$/ $$/   $$/  )",
-},
-{
-R"(  _______   __        ________  __    __  _______    ______   __    __  )",    
-R"( |       \ |  \      |        \|  \  |  \|       \  /      \ |  \  |  \ )",
-R"( | $$$$$$$\| $$      | $$$$$$$$| $$\ | $$| $$$$$$$\|  $$$$$$\| $$  | $$ )",    
-R"( | $$__/ $$| $$      | $$__    | $$$\| $$| $$  | $$| $$__| $$| $$__| $$ )",
-R"( | $$    $$| $$      | $$  \   | $$$$\ $$| $$  | $$| $$    $$| $$    $$ )",      
-R"( | $$$$$$$\| $$      | $$$$$   | $$\$$ $$| $$  | $$| $$$$$$$$| $$$$$$$$ )",      
-R"( | $$__/ $$| $$_____ | $$_____ | $$ \$$$$| $$__/ $$| $$  | $$| $$  | $$ )",      
-R"( | $$    $$| $$    \| $$      \| $$  \$$$| $$    $$| $$  | $$| $$  | $$ )",      
-R"(  \$$$$$$$  \$$$$$$$$ \$$$$$$$$ \$$   \$$ \$$$$$$$  \$$   \$$ \$$   \$$ )",
-}
-};
+// std::vector<std::vector<std::string>> menuLogos = {
+// {
+// R"(  /$$$$$$$  /$$       /$$$$$$$$ /$$   /$$ /$$$$$$$   /$$$$$$  /$$   /$$ )",    
+// R"( | $$__  $$| $$      | $$_____/| $$$ | $$| $$__  $$ /$$__  $$| $$  | $$ )",    
+// R"( | $$  \ $$| $$      | $$      | $$$$| $$| $$  \ $$| $$  \ $$| $$  | $$ )",    
+// R"( | $$$$$$$ | $$      | $$$$$   | $$ $$ $$| $$  | $$| $$$$$$$$| $$$$$$$$ )",    
+// R"( | $$__  $$| $$      | $$__/   | $$  $$$$| $$  | $$| $$__  $$| $$__  $$ )",    
+// R"( | $$  \ $$| $$      | $$      | $$\  $$$| $$  | $$| $$  | $$| $$  | $$ )",    
+// R"( | $$$$$$$/| $$$$$$$$| $$$$$$$$| $$ \  $$| $$$$$$$/| $$  | $$| $$  | $$ )",    
+// R"( |_______/ |________/|________/|__/  \__/|_______/ |__/  |__/|__/  |__/ )",    
+// R"(                                                                        )"  
+// },
+// {
+// R"( $$$$$$$\  $$\       $$$$$$$$\ $$\   $$\ $$$$$$$\   $$$$$$\  $$\   $$\  )",    
+// R"( $$  __$$\ $$ |      $$  _____|$$$\  $$ |$$  __$$\ $$  __$$\ $$ |  $$ | )",    
+// R"( $$ |  $$ |$$ |      $$ |      $$$$\ $$ |$$ |  $$ |$$ /  $$ |$$ |  $$ | )",    
+// R"( $$$$$$$\ |$$ |      $$$$$\    $$ $$\$$ |$$ |  $$ |$$$$$$$$ |$$$$$$$$ | )",    
+// R"( $$  __$$\ $$ |      $$  __|   $$ \$$$$ |$$ |  $$ |$$  __$$ |$$  __$$ | )",    
+// R"( $$ |  $$ |$$ |      $$ |      $$ |\$$$ |$$ |  $$ |$$ |  $$ |$$ |  $$ | )",    
+// R"( $$$$$$$  |$$$$$$$$\ $$$$$$$$\ $$ | \$$ |$$$$$$$  |$$ |  $$ |$$ |  $$ | )",    
+// R"( \_______/ \________|\________|\__|  \__|\_______/ \__|  \__|\__|  \__| )",   
+// R"(                                                                        )"
+// },
+// {
+// R"(  _______   __        ________  __    __  _______    ______   __    __  )",      
+// R"( /       \ /  |      /        |/  \  /  |/       \  /      \ /  |  /  | )",      
+// R"( $$$$$$$  |$$ |      $$$$$$$$/ $$  \ $$ |$$$$$$$  |/$$$$$$  |$$ |  $$ | )",      
+// R"( $$ |__$$ |$$ |      $$ |__    $$$  \$$ |$$ |  $$ |$$ |__$$ |$$ |__$$ | )",      
+// R"( $$    $$< $$ |      $$    |   $$$$  $$ |$$ |  $$ |$$    $$ |$$    $$ | )",      
+// R"( $$$$$$$  |$$ |      $$$$$/    $$ $$ $$ |$$ |  $$ |$$$$$$$$ |$$$$$$$$ | )",      
+// R"( $$ |__$$ |$$ |_____ $$ |_____ $$ |$$$$ |$$ |__$$ |$$ |  $$ |$$ |  $$ | )",      
+// R"( $$    $$/ $$       |$$       |$$ | $$$ |$$    $$/ $$ |  $$ |$$ |  $$ | )",      
+// R"( $$$$$$$/  $$$$$$$$/ $$$$$$$$/ $$/   $$/ $$$$$$$/  $$/   $$/ $$/   $$/  )",
+// },
+// {
+// R"(  _______   __        ________  __    __  _______    ______   __    __  )",    
+// R"( |       \ |  \      |        \|  \  |  \|       \  /      \ |  \  |  \ )",
+// R"( | $$$$$$$\| $$      | $$$$$$$$| $$\ | $$| $$$$$$$\|  $$$$$$\| $$  | $$ )",    
+// R"( | $$__/ $$| $$      | $$__    | $$$\| $$| $$  | $$| $$__| $$| $$__| $$ )",
+// R"( | $$    $$| $$      | $$  \   | $$$$\ $$| $$  | $$| $$    $$| $$    $$ )",      
+// R"( | $$$$$$$\| $$      | $$$$$   | $$\$$ $$| $$  | $$| $$$$$$$$| $$$$$$$$ )",      
+// R"( | $$__/ $$| $$_____ | $$_____ | $$ \$$$$| $$__/ $$| $$  | $$| $$  | $$ )",      
+// R"( | $$    $$| $$    \| $$      \| $$  \$$$| $$    $$| $$  | $$| $$  | $$ )",      
+// R"(  \$$$$$$$  \$$$$$$$$ \$$$$$$$$ \$$   \$$ \$$$$$$$  \$$   \$$ \$$   \$$ )",
+// }
+// };
 
 std::vector<std::string> menuOptions = {
     "create blank",
@@ -93,6 +94,10 @@ std::vector<std::string> menuOptions = {
 int main(){
 
     Mesh mesh = createCube();
+    
+    // Load the 3D logo for the Main Menu
+    Mesh menuLogoMesh = LoadOBJ("blendah.obj");
+    float menuLogoRotY = 0.0f;
 
     AppState state;
 
@@ -220,20 +225,49 @@ int main(){
         // Main Menu
         if (currentStage == AppStage::MENU){
             
-            static int frameCounter = 0;
-            static int logoIndex = 0;
+            ftxui::Element logo_element;
 
-            // Timer logic to swap the frames every 0.2s (approx 7 frames at 30ms refresh)
-            frameCounter++;
-            if (frameCounter >= 7){
-                frameCounter = 0;
-                logoIndex = (logoIndex + 1) % 4;
-            }
+            // If the model isn't in the folder then show an error instead of breaking
+            if (menuLogoMesh.vertices.empty()){
+                logo_element = ftxui::text(" [ ERROR: blendah.obj NOT FOUND ] ") | ftxui::bold | ftxui::color(ftxui::Color::Red) | ftxui::center;
+            } 
+            else{
+                // Spin the model continuously
+                menuLogoRotY += 0.05f;
 
-            ftxui::Elements logo_static;
-            const auto& currentLogo = menuLogos[logoIndex];
-            for (const auto& line : currentLogo){
-                logo_static.push_back(ftxui::text(line) | ftxui::bold | ftxui::color(ftxui::Color::White) | ftxui::center);
+                // Canvas for model and the camera coords
+                ftxui::Canvas logo_canvas(140, 100);
+                int cX = 70, cY = 60;
+                float zoom = 65.0f; 
+                float zOff = 4.0f;  
+
+                for (const auto& edge : menuLogoMesh.edges){
+                    Vector3 v1 = menuLogoMesh.vertices[edge.first];
+                    Vector3 v2 = menuLogoMesh.vertices[edge.second];
+
+                    // Math to rotate on the Y axis
+                    auto rotY = [&](Vector3 v, float angle){
+                        float s = std::sin(angle), c = std::cos(angle);
+                        return Vector3(v.x * c + v.z * s, v.y, -v.x * s + v.z * c);
+                    };
+
+                    v1 = rotY(v1, menuLogoRotY);
+                    v2 = rotY(v2, menuLogoRotY);
+
+                    // Project 3D to 2D
+                    if (v1.z + zOff > 0.1f && v2.z + zOff > 0.1f){
+                        float p1x = (v1.x / (v1.z + zOff)) * zoom;
+                        float p1y = (v1.y / (v1.z + zOff)) * zoom; 
+                        float p2x = (v2.x / (v2.z + zOff)) * zoom;
+                        float p2y = (v2.y / (v2.z + zOff)) * zoom;
+
+                        logo_canvas.DrawPointLine(p1x + cX, p1y + cY, p2x + cX, p2y + cY, ftxui::Color::Orange1);
+                    }
+                }
+
+                logo_canvas.DrawText(56, 90, "B L E N D A H", ftxui::Color::Yellow);
+
+                logo_element = ftxui::canvas(std::move(logo_canvas)) | ftxui::color(ftxui::Color::Orange1) | ftxui::center;
             }
 
             ftxui::Elements menu_list;
@@ -247,7 +281,7 @@ int main(){
 
             return ftxui::vbox({
                 ftxui::filler(),
-                ftxui::vbox(std::move(logo_static)),
+                logo_element,
                 ftxui::filler(),
                 ftxui::vbox(std::move(menu_list)),
                 ftxui::filler()
@@ -300,9 +334,7 @@ int main(){
                 ftxui::separator(),
                 ftxui::text("[ENTER] Load    [ESC] Cancel") | ftxui::dim | ftxui::center
                 
-            })
-
-            | ftxui::border | ftxui::size(ftxui::WIDTH, ftxui::EQUAL, 60) | ftxui::center;
+            }) | ftxui::border | ftxui::size(ftxui::WIDTH, ftxui::EQUAL, 60) | ftxui::center;
 
             return ftxui::vbox({
                 ftxui::filler(),
