@@ -19,7 +19,7 @@
 #include "include/obj_io.h"
 
 // Stage Management
-enum class AppStage {BOOT, MENU, IMPORT, SCENE};
+enum class AppStage {BOOT, MENU, IMPORT, SCENE, HELP};
 
 // ASCII Constant for bootup
 const std::string GRADIENT = "$@B%8&WM#*oahkbdpqwmZO0QLCJUYXzcvunxrjft/\\|()1{}[]?-_+~<>i!lI;:,\"^'.";
@@ -77,7 +77,7 @@ R"( | $$__/ $$| $$      | $$__    | $$$\| $$| $$  | $$| $$__| $$| $$__| $$ )",
 R"( | $$    $$| $$      | $$  \   | $$$$\ $$| $$  | $$| $$    $$| $$    $$ )",      
 R"( | $$$$$$$\| $$      | $$$$$   | $$\$$ $$| $$  | $$| $$$$$$$$| $$$$$$$$ )",      
 R"( | $$__/ $$| $$_____ | $$_____ | $$ \$$$$| $$__/ $$| $$  | $$| $$  | $$ )",      
-R"( | $$    $$| $$    \| $$    \| $$  \$$$| $$    $$| $$  | $$| $$  | $$ )",      
+R"( | $$    $$| $$    \| $$      \| $$  \$$$| $$    $$| $$  | $$| $$  | $$ )",      
 R"(  \$$$$$$$  \$$$$$$$$ \$$$$$$$$ \$$   \$$ \$$$$$$$  \$$   \$$ \$$   \$$ )",
 }
 };
@@ -198,7 +198,23 @@ int main(){
                 logo_lines.push_back(ftxui::text(render_line) | ftxui::bold | ftxui::color(ftxui::Color::Orange1) | ftxui::center);
             }
 
-            return ftxui::vbox({ftxui::filler(), ftxui::vbox(std::move(logo_lines)), ftxui::filler()});
+            // Bootup Loading Bar
+            std::string progress_bar = "";
+            int bar_width = 30;
+            for (int i = 0; i < bar_width; ++i){
+                progress_bar += (i < (int)(progress * bar_width)) ? "█" : " ";
+            }
+
+            return ftxui::vbox({
+                ftxui::filler(),
+                ftxui::vbox(std::move(logo_lines)),
+                ftxui::text(" "), // Spacer
+                ftxui::hbox({
+                    ftxui::text(" ["), ftxui::text(progress_bar) | ftxui::color(ftxui::Color::Orange1), ftxui::text("] ")
+                }) | ftxui::center,
+                ftxui::text("INITIALIZING BLENDAH ENGINE...") | ftxui::dim | ftxui::center,
+                ftxui::filler()
+            });
         }
 
         // Main Menu
@@ -236,6 +252,37 @@ int main(){
                 ftxui::vbox(std::move(menu_list)),
                 ftxui::filler()
             });
+        }
+
+        // Help Stage
+        if (currentStage == AppStage::HELP) {
+            auto help_content = ftxui::vbox({
+                ftxui::text("--- BLENDAH HELP MENU ---") | ftxui::bold | ftxui::color(ftxui::Color::Orange1) | ftxui::center,
+                ftxui::separator(),
+                ftxui::paragraph("1. NAVIGATION (VIEW MODE)") | ftxui::bold,
+                ftxui::text("   WASD   : Rotate Camera"),
+                ftxui::text("   +/-    : Zoom In/Out"),
+                ftxui::text("   r      : Reset Camera"),
+                ftxui::text("   TAB    : Switch to EDIT MODE"),
+                ftxui::text("   ESC    : Return to MAIN MENU"),
+                ftxui::text(" "),
+                ftxui::paragraph("2. VERTEX EDITING (EDIT MODE)") | ftxui::bold,
+                ftxui::text("   WASD/QE: Spatial Vertex Selection"),
+                ftxui::text("   Arrows : Free Move (View Relative)"),
+                ftxui::text("   ^A/^D  : Lock Move X-Axis (Red)"),
+                ftxui::text("   ^W/^S  : Lock Move Y-Axis (Green)"),
+                ftxui::text("   ^Q/^E  : Lock Move Z-Axis (Blue)"),
+                ftxui::text(" "),
+                ftxui::paragraph("3. COMMAND LINE (NEOVIM STYLE)") | ftxui::bold,
+                ftxui::text("   :w [path]      : Export Mesh to OBJ"),
+                ftxui::text("   :export [path] : Export Mesh to OBJ"),
+                ftxui::text("   :q / :quit     : Exit Scene to Menu"),
+                ftxui::text("   :export -h     : Show export syntax"),
+                ftxui::separator(),
+                ftxui::text("Press [ESC] to return to Main Menu") | ftxui::dim | ftxui::center
+            }) | ftxui::border | ftxui::size(ftxui::WIDTH, ftxui::EQUAL, 80) | ftxui::center;
+
+            return ftxui::vbox({ ftxui::filler(), help_content, ftxui::filler() });
         }
 
         ftxui::Element scene = RenderScene(mesh, state.camera, state.mode, state.selectedVertex, state.inAxisSession, state.lastMoved);
@@ -313,7 +360,19 @@ int main(){
                     importError = "";
                     currentStage = AppStage::IMPORT;
                 }
+                if (menuSelector == 2){ // Open Help Stage
+                    currentStage = AppStage::HELP;
+                }
                 if (menuSelector == 3) screen.Exit();
+                return true;
+            }
+            return true;
+        }
+
+        // Help Stage Inputs
+        if (currentStage == AppStage::HELP){
+            if (ev == ftxui::Event::Escape){
+                currentStage = AppStage::MENU;
                 return true;
             }
             return true;
