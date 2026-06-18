@@ -49,4 +49,4 @@ Blendah is written in C++ and uses the FTXUI library for the terminal interface.
 
 ---
 
-Go to my blog to read more technical details.
+Go to my [blog](https://omnimistic.github.io/blogs.html) to read more technical details.
